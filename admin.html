@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة القيادة | جماعة وجدة</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>إدارة بلاغات وجدة</h1>
+        <a href="index.html" class="btn-outline">العودة للتطبيق</a>
+    </header>
+
+    <div class="admin-container">
+        <h2 style="margin-bottom: 15px; color: var(--blue);">جدول البلاغات الواردة</h2>
+        <div style="overflow-x: auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>التاريخ</th>
+                        <th>النوع</th>
+                        <th>الوصف</th>
+                        <th>الحالة</th>
+                        <th>إجراء</th>
+                    </tr>
+                </thead>
+                <tbody id="admin-table-body">
+                    <tr><td colspan="5" style="text-align:center;">جاري التحميل...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        async function fetchAdminReports() {
+            try {
+                const res = await fetch('http://localhost:3000/api/reports');
+                const reports = await res.json();
+                const tbody = document.getElementById('admin-table-body');
+                tbody.innerHTML = '';
+
+                if(reports.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">لا توجد بلاغات مسجلة</td></tr>';
+                    return;
+                }
+
+                reports.forEach(report => {
+                    const date = new Date(report.createdAt).toLocaleString('ar-MA');
+                    tbody.innerHTML += `
+                        <tr>
+                            <td dir="ltr" style="text-align: right;">${date}</td>
+                            <td><strong>${report.category}</strong></td>
+                            <td>${report.description || '-'}</td>
+                            <td>
+                                <select onchange="updateStatus('${report._id}', this.value)">
+                                    <option value="pending" ${report.status === 'pending' ? 'selected' : ''}>في الانتظار</option>
+                                    <option value="in-progress" ${report.status === 'in-progress' ? 'selected' : ''}>جاري الإصلاح</option>
+                                    <option value="solved" ${report.status === 'solved' ? 'selected' : ''}>تم الحل</option>
+                                </select>
+                            </td>
+                            <td><button onclick="alert('تم حفظ التغييرات بنجاح')" class="btn-outline" style="color:var(--blue); border-color:var(--blue); font-weight:bold;">حفظ</button></td>
+                        </tr>
+                    `;
+                });
+            } catch (err) {
+                document.getElementById('admin-table-body').innerHTML = '<tr><td colspan="5" style="text-align:center; color:red;">خطأ في الاتصال بالخادم</td></tr>';
+            }
+        }
+
+        async function updateStatus(id, newStatus) {
+            try {
+                await fetch(`http://localhost:3000/api/reports/${id}/status`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: newStatus })
+                });
+            } catch(e) {
+                alert('فشل تحديث الحالة');
+            }
+        }
+
+        window.onload = fetchAdminReports;
+    </script>
+</body>
+</html>
